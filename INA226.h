@@ -1,3 +1,9 @@
+/*
+*@autor DanielBlancoR
+*@email danielcblancor@gmail.com
+*@ide Keil uVision
+*/
+
 #ifndef INA226_H_
 #define INA226_H_
 
@@ -9,6 +15,7 @@ extern "C"
 
 #include <stdio.h>
 #include <stdint.h>
+#include <math.h>
 #include "stm32f7xx_hal.h"
 //#include "main.h"
 
@@ -91,6 +98,9 @@ typedef struct
 	uint16_t Current;
 	uint16_t Calibration;
 	
+	float CurrentLSB;
+	
+	
 }INA226_Values;
 
 void INA226_INIT (void);
@@ -98,6 +108,7 @@ void INA226_Config (Mode_t mode, Bit_ConvTime_t shuntVoltTime, Bit_ConvTime_t Bu
 void INA226_Reset (void);
 uint16_t INA226_ID(void);
 
+void INA226_Voltage_Current_Power(float *volt, float *current, float *power);
 float INA226_ShuntVoltage (void);
 float INA226_BusVoltage (void);
 float INA226_Power (void);
