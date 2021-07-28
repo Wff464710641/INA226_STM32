@@ -1,12 +1,13 @@
 #include "INA226.h"
 
-uint16_t Buff[2], tempReg;
+uint16_t Buff[10], tempReg;
 
 extern I2C_HandleTypeDef hi2c1;
 INA226_Values INA226_values;
 
 void INA226_I2C_Write(uint8_t pByte, uint16_t Data);
 void INA226_I2C_Read(uint8_t pByte, uint16_t* pData);
+void INA226_I2C_ReadBuff(uint8_t pByte, uint8_t* pData, uint16_t size);
 
 void INA226_INIT(void)
 {
@@ -25,8 +26,9 @@ void INA226_Config (Mode_t mode, Bit_ConvTime_t shuntVoltTime, Bit_ConvTime_t Bu
 	INA226Handle.VBUSCT = BusVoltTime;
 	INA226Handle.AVG = AVGMode;
 	
-
 	INA226_I2C_Write(INA226_CONFIG_REG, INA226Handle.Config_mask);
+	
+	INA226_SetCalibration(R_SHUNT,8);
 }
 
 void INA226_Reset(void)
@@ -46,6 +48,21 @@ uint16_t INA226_ID(void)
 	return tempReg;
 }
 
+void INA226_Voltage_Current_Power(float *volt, float *current, float *power)
+{
+	uint8_t BuffData[10];
+	INA226_I2C_ReadBuff(INA226_BUS_VOLTAGE_REG,BuffData,6);
+	
+	INA226_values.BusVoltage = (BuffData[0] << 8) | BuffData[1];
+//	INA226_values.Power = (BuffData[2] << 8) | BuffData[3];
+//	INA226_values.Current = (BuffData[4] << 8) | BuffData[5];
+	
+	*volt    = INA226_values.BusVoltage * 1.25e-03;
+//	*current = INA226_values.Current * 1e-03;
+//	*power   = INA226_values.Power * 25e-03;
+	
+}
+
 float INA226_ShuntVoltage (void){
 
 	INA226_I2C_Read(INA226_SHUNT_VOLTAGE_REG,&tempReg);
@@ -56,14 +73,22 @@ float INA226_ShuntVoltage (void){
 float INA226_BusVoltage (void)
 {
 	INA226_I2C_Read(INA226_BUS_VOLTAGE_REG,&tempReg);
-	return tempReg * 1.25e-03;	
+	return tempReg * 1.25e-03f;	
 }
 
-float INA226_Power (void);
+float INA226_Power (void)
+{
+	INA226_I2C_Read(INA226_POWER_REG,&tempReg);
+	
+	return tempReg * (INA226_values.CurrentLSB*25);
+}
 
 float INA226_Current (void)
 {
-
+	INA226_I2C_Read(INA226_CURRENT_REG,&tempReg);
+	
+	return tempReg * INA226_values.CurrentLSB;
+//	return ((INA226_ShuntVoltage()*INA226_values.Calibration)/2048) * INA226_values.CurrentLSB;
 }
 
 void INA226_SetCalibration (float R_Shunt,float MaxExpCurrent)
@@ -77,8 +102,10 @@ void INA226_SetCalibration (float R_Shunt,float MaxExpCurrent)
 	}
 	
 	Current_LSB = MaxExpCurrent / 32768.0f;
+	
 	CAL = 0.00512f/(Current_LSB*R_Shunt);
 	INA226_values.Calibration = CAL;
+	INA226_values.CurrentLSB = Current_LSB;
 	INA226_I2C_Write(INA226_CALIBRATION_REG, (uint16_t)CAL);
 }
 
@@ -109,4 +136,9 @@ void INA226_I2C_Read(uint8_t pByte, uint16_t* pData)
 	HAL_I2C_Mem_Read(&hi2c1, INA226_ADDRESS << 1, pByte, 1, reg, 2, 100);
 	*pData = (reg[0] << 8) | reg[1];
 	
+}
+
+void INA226_I2C_ReadBuff(uint8_t pByte, uint8_t* pData, uint16_t size)
+{
+	HAL_I2C_Mem_Read(&hi2c1, INA226_ADDRESS << 1, pByte, 1, pData, size, 10);
 }
