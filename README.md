@@ -1,4 +1,4 @@
-# INA226_STM32
+# INA226_STM32F7
 Librería en desarrollo para el uso del modulo sensor INA226 con STM32F746ZG.
 ![IMG_3823](https://user-images.githubusercontent.com/65134487/127251262-b5a0584c-ff4a-4e25-8b57-97a467b18805.JPG)
 
